@@ -1,75 +1,129 @@
 import dockerfile
 import pprint
 import shlex
-import pylxd
+import random
+import string
+import re
+import sub.lxdcontroller as lxdcontroller
 
-client = pylxd.Client()
+
+def randomname(n):
+    randlst = [
+        random.choice(
+            string.ascii_letters) for i in range(n)]
+    return ''.join(randlst)
 
 
 def convert(filepath):
+    entry_cmd = {"entrypoint": "", "cmd": ""}
+
+    hostname = "building-" + randomname(10)
     for command in dockerfile.parse_file(filepath):
         if command.cmd == "from":
-            from_command_lxd(command.value)
+            pass
+            #from_command_lxd(hostname, command.value)
 
         elif command.cmd == "run":
-            run_command_lxd(command.value)
+            pass
+            #run_command_lxd(hostname, command.value)
 
         elif command.cmd == "copy":
-            copy_command_lxd(command.value)
+            pass
+            #copy_command_lxd(hostname, command.value)
 
         elif command.cmd == "env":
-            env_command_lxd(command.value)
+            pass
+            #env_command_lxd(hostname, command.value)
 
         elif command.cmd == "volume":
-            volume_command_lxd(command.value)
+            volume_command_lxd(hostname, command.value)
 
         elif command.cmd == "entrypoint":
-            entrypoint_command_lxd(command.value)
+            entry_cmd["entrypoint"] = command.value
+            entry_cmd["entrypoint_json"] = command.json
 
         elif command.cmd == "cmd":
-            cmd_command_lxd(command.value)
+            entry_cmd["cmd"] = command.value
+            entry_cmd["cmd_json"] = command.json
 
         else:
             print(command.cmd)
+    lxdcontroller.stop_machine(hostname)
+    lxdcontroller.delete_machine(hostname)
+
+    make_startup_command(entry_cmd)
 
 
-def from_command_lxd(value):
+def from_command_lxd(hostname, value):
+    image = "images:" + value[0].split(":")[0]
+    try:
+        image += "/" + value[0].split(":")[1]
+    except BaseException:
+        raise BaseException("バージョン(数字ベース)が指定されていません")
+    if lxdcontroller.launch_machine(hostname, image):
+        pass
+    else:
+        raise BaseException("FROMで指定できるのはディストリビューションとバージョン(数字ベース)のみです")
+    lxdcontroller.network_test_machine(hostname)
+
+
+def run_command_lxd(hostname, value):
     pass
-    # print(value[0])
+    cmd = shlex.split(value[0])
+    if lxdcontroller.exec_command(hostname, cmd):
+        pass
+    else:
+        print(cmd)
+        raise BaseException("起動失敗？")
 
 
-def run_command_lxd(value):
+def copy_command_lxd(hostname, value):
     pass
+    try:
+        lxdcontroller.copy_command(hostname, value[0], value[1])
+    except BaseException:
+        raise BaseException("COPYの記述エラー")
 
+
+def env_command_lxd(hostname, value):
+    pass
+    #lxdcontroller.exec_command(hostname, ["printenv"])
+    lxdcontroller.exec_command(
+        hostname, [
+            "\"echo " + value[0] + "=" + value[1] + ">>" + "/etc/profile\""])
+    #lxdcontroller.exec_command(hostname, ["printenv"])
+    print((value))
+
+
+def volume_command_lxd(hostname, value):
+    pass
     # print(shlex.split(value[0]))
 
 
-def copy_command_lxd(value):
+def make_startup_command(value):
+    print(value)
+    command = ""
+    if value["entrypoint"] == "":
+        pass
+    elif value["entrypoint_json"]:
+        for i in value["entrypoint"]:
+            command += i + " "
+    else:
+        command += "/bin/sh -c " + value["entrypoint"][0] + " "
+
+    if value["cmd"] == "":
+        pass
+    elif value["cmd_json"]:
+        for i in value["cmd"]:
+            command += i + " "
+        pass
+    else:
+        command += "/bin/sh -c " + value["cmd"][0] + " "
+    print(command)
     pass
-    # print(shlex.split(value[0]))
-
-
-def env_command_lxd(value):
-    pass
-    # print(shlex.split(value[0]))
-
-
-def volume_command_lxd(value):
-    pass
-    # print(shlex.split(value[0]))
-
-
-def entrypoint_command_lxd(value):
-    pass
-    # print(shlex.split(value[0]))
-
-
-def cmd_command_lxd(value):
-    pass
-    # print(shlex.split(value[0]))
 
 
 if __name__ == "__main__":
     pass
-    print(client.images.all())
+
     convert('./dockerfile_test')
