@@ -15,6 +15,8 @@ def randomname(n):
 
 
 def convert(filepath):
+    environment = []
+    working_directory = []
     entry_cmd = {"entrypoint": "", "cmd": ""}
 
     hostname = "building-" + randomname(10)
@@ -33,7 +35,7 @@ def convert(filepath):
 
         elif command.cmd == "env":
             pass
-            #env_command_lxd(hostname, command.value)
+            environment.append(env_command_lxd(hostname, command.value))
 
         elif command.cmd == "volume":
             volume_command_lxd(hostname, command.value)
@@ -51,7 +53,7 @@ def convert(filepath):
     lxdcontroller.stop_machine(hostname)
     lxdcontroller.delete_machine(hostname)
 
-    make_startup_command(entry_cmd)
+    print(make_startup_command(entry_cmd))
 
 
 def from_command_lxd(hostname, value):
@@ -67,7 +69,7 @@ def from_command_lxd(hostname, value):
     lxdcontroller.network_test_machine(hostname)
 
 
-def run_command_lxd(hostname, value):
+def run_command_lxd(hostname, value, working_directory, environment):
     pass
     cmd = shlex.split(value[0])
     if lxdcontroller.exec_command(hostname, cmd):
@@ -87,12 +89,7 @@ def copy_command_lxd(hostname, value):
 
 def env_command_lxd(hostname, value):
     pass
-    #lxdcontroller.exec_command(hostname, ["printenv"])
-    lxdcontroller.exec_command(
-        hostname, [
-            "\"echo " + value[0] + "=" + value[1] + ">>" + "/etc/profile\""])
-    #lxdcontroller.exec_command(hostname, ["printenv"])
-    print((value))
+    return "export " + value[0] + "=" + value[1]
 
 
 def volume_command_lxd(hostname, value):
@@ -101,7 +98,6 @@ def volume_command_lxd(hostname, value):
 
 
 def make_startup_command(value):
-    print(value)
     command = ""
     if value["entrypoint"] == "":
         pass
@@ -119,7 +115,7 @@ def make_startup_command(value):
         pass
     else:
         command += "/bin/sh -c " + value["cmd"][0] + " "
-    print(command)
+    return command
     pass
 
 
